@@ -1,5 +1,6 @@
-use crate::git_cmd::GitCommandTrait;
-
+use std::num::ParseIntError;
+use crate::git_cmd::{GitCommandTrait};
+use crate::errors::GitError;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BranchInfo {
     pub name: String,
@@ -12,8 +13,7 @@ pub fn list_branches(
     cmd: &impl GitCommandTrait,
     origin_branch: &str,
     threshold: u32,
-) -> Result<Vec<BranchInfo>, String> {
-    // Utiliser le trait au lieu d'appeler Command directement
+) -> Result<Vec<BranchInfo>, GitError> {
     let result = cmd.for_each_ref(&[
         "--format",
         "%(refname:short) %(committerdate:short) %(authorname)",
@@ -22,7 +22,6 @@ pub fn list_branches(
 
     let mut stale_branches: Vec<BranchInfo> = Vec::new();
 
-    // Afficher le résultat brut
     for line in result.lines() {
         let parts: Vec<&str> = line.splitn(3, ' ').collect();
 
@@ -58,7 +57,7 @@ fn get_commit_behind(
     cmd: &impl GitCommandTrait,
     origin_branch: &str,
     branch_name: &str,
-) -> Result<u32, String> {
+) -> Result<u32, GitError> {
     let result = cmd.rev_list(&[
         "--count",
         &format!("{}..{}", branch_name, origin_branch),
@@ -67,7 +66,7 @@ fn get_commit_behind(
     let count: u32 = result
         .trim()
         .parse()
-        .map_err(|e| format!("Erreur de parsing du nombre de commits: {}", e))?;
+        .map_err(|e: ParseIntError| GitError::ParsingError {error: e.to_string()})?;
 
     Ok(count)
 }

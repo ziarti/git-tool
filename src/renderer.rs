@@ -1,7 +1,7 @@
-use crate::git;
+use crate::git_repository;
 
 use comfy_table::{Cell, Color, Table};
-use git::BranchInfo;
+use git_repository::BranchInfo;
 
 pub fn render_branch_info(author: &str, branches: &[&BranchInfo], threshold: u32) {
     let table = build_branch_table(branches, threshold);

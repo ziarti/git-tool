@@ -1,4 +1,5 @@
-use git_tool::git;
+use git_tool::errors::GitError;
+use git_tool::git_repository;
 use git_tool::git_cmd::GitCommandTrait;
 
 /// Mock qui retourne des données prédéfinies au lieu d'exécuter Git
@@ -41,21 +42,21 @@ impl GitCommandMock {
 }
 
 impl GitCommandTrait for GitCommandMock {
-    fn rev_list(&self, args: &[&str]) -> Result<String, String> {
+    fn rev_list(&self, args: &[&str]) -> Result<String, GitError> {
         // Extraire le range "branch..origin" des arguments
         // Format: ["--count", "origin/feature-a..origin/production"]
         if args.len() < 2 {
-            return Err("Arguments insuffisants pour rev-list".to_string());
+            return Err(GitError::ExecutionError {error: "Arguments insuffisants pour rev-list".to_string()});
         }
 
         let key_range = args[1];
         match self.commit_counts.get(key_range) {
             Some(&count) => Ok(count.to_string()),
-            None => Err(format!("Pas de données mockées pour le range: {}", key_range)),
+            None => Err(GitError::ExecutionError {error: format!("Pas de données mockées pour le range: {}", key_range)}),
         }
     }
 
-    fn for_each_ref(&self, _args: &[&str]) -> Result<String, String> {
+    fn for_each_ref(&self, _args: &[&str]) -> Result<String, GitError> {
         // Retourner les branches simulées
         Ok(self.branches_output.clone())
     }
@@ -73,7 +74,7 @@ fn test_list_branches_with_mock() {
         .with_commit_count("origin/bugfix-legacy", "origin/production", 75);
 
     // Appeler list_branches avec le mock
-    let result = git::list_branches(&mock, "origin/production", 100);
+    let result = git_repository::list_branches(&mock, "origin/production", 100);
 
     // Vérifier le résultat
     assert!(result.is_ok(), "list_branches devrait réussir");
@@ -94,7 +95,7 @@ fn test_list_branches_empty() {
     // Mock sans branches
     let mock = GitCommandMock::new().with_branches("");
 
-    let result = git::list_branches(&mock, "origin/production", 100);
+    let result = git_repository::list_branches(&mock, "origin/production", 100);
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap().len(), 0, "Devrait retourner 0 branches");
@@ -107,7 +108,7 @@ fn test_list_branches_below_threshold() {
         .with_branches("origin/feature-a 2025-01-15 Alice")
         .with_commit_count("origin/feature-a", "origin/main", 50);
 
-    let result = git::list_branches(&mock, "origin/main", 100);
+    let result = git_repository::list_branches(&mock, "origin/main", 100);
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap().len(), 0, "Aucune branche ne dépasse le seuil");
