@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use git_tool::cli::{Cli, Commands};
 use git_tool::git_cmd::GitCommand;
-use git_tool::git_repository::{BranchInfo, list_branches};
+use git_tool::git_repository::{BranchInfo, list_branches, validate_git_repository};
 use git_tool::renderer::render_branch_info;
 use std::collections::HashMap;
 
@@ -14,12 +14,13 @@ fn main() -> Result<()> {
             origin_branch,
             threshold,
         } => {
+            let git_cmd = GitCommand;
+            validate_git_repository(&git_cmd).context("Not a valid git repository")?;
             println!(
                 "🔍 Recherche des branches obsolètes à partir de la branch {} (>{} commits)...\n",
                 origin_branch, threshold
             );
 
-            let git_cmd = GitCommand;
             let branches = list_branches(&git_cmd, &origin_branch, threshold)
                 .context(format!("Failed list branches from {}", origin_branch))?;
 

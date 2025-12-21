@@ -4,6 +4,7 @@ use std::process::Command;
 pub trait GitCommandTrait {
     fn rev_list(&self, args: &[&str]) -> Result<String, GitError>;
     fn for_each_ref(&self, args: &[&str]) -> Result<String, GitError>;
+    fn rev_parse(&self, args: &[&str]) -> Result<String, GitError>;
 }
 
 pub struct GitCommand;
@@ -30,5 +31,9 @@ impl GitCommandTrait for GitCommand {
 
     fn for_each_ref(&self, args: &[&str]) -> Result<String, GitError> {
         self.execute_git_command("for-each-ref", args)
+    }
+    
+    fn rev_parse(&self, args: &[&str]) -> Result<String, GitError> {
+        self.execute_git_command("rev-parse", args)
     }
 }

@@ -104,15 +104,25 @@ Total branch: 3
 
 ```
 git-tool/
-├── Cargo.toml          # Dépendances (clap, comfy_table)
+├── Cargo.toml              # Dépendances et configuration
 ├── src/
-│   ├── main.rs         # Point d'entrée et orchestration
-│   ├── cli.rs          # Définition CLI avec clap
-│   ├── git.rs          # Logique Git et struct BranchInfo
-│   └── renderer.rs     # Affichage avec tableaux colorés
-├── CLAUDE.md           # Documentation pour Claude Code
-└── README.md           # Ce fichier
+│   ├── lib.rs              # Bibliothèque publique (API)
+│   ├── main.rs             # Point d'entrée binaire
+│   ├── cli.rs              # Définition CLI avec clap
+│   ├── errors.rs           # Types d'erreurs personnalisés (GitError)
+│   ├── git_cmd.rs          # Trait GitCommandTrait et implémentation
+│   ├── git_repository.rs   # Logique métier Git (BranchInfo, validation)
+│   └── renderer.rs         # Affichage avec tableaux colorés
+├── tests/
+│   └── git_tests.rs        # Tests d'intégration avec MockGitCommand
+└── README.md               # Ce fichier
 ```
+
+**Architecture :**
+- **lib.rs + main.rs** : Séparation bibliothèque/binaire pour réutilisabilité et tests
+- **Traits** : `GitCommandTrait` permet l'injection de dépendances et le mocking
+- **Erreurs typées** : `GitError` enum avec variants spécifiques (thiserror)
+- **Tests** : Tests unitaires dans `#[cfg(test)]` + tests d'intégration dans `tests/`
 
 ### Commandes de développement
 
@@ -120,8 +130,20 @@ git-tool/
 # Compiler en mode développement
 cargo build
 
-# Lancer les tests
+# Lancer tous les tests (unitaires + intégration)
 cargo test
+
+# Lancer uniquement les tests unitaires
+cargo test --lib
+
+# Lancer uniquement les tests d'intégration
+cargo test --test git_tests
+
+# Revoir les snapshot tests
+cargo insta review
+
+# Accepter tous les snapshots
+cargo insta accept
 
 # Vérifier le code sans compiler
 cargo check
@@ -135,17 +157,75 @@ cargo clippy
 
 ## 🧰 Technologies utilisées
 
-- **Rust** - Langage de programmation
-- **clap** - Parsing des arguments CLI avec macros derive
+### Dépendances principales
+- **Rust 1.70+** - Langage de programmation système
+- **clap 4.x** - Parsing des arguments CLI avec macros derive
 - **comfy_table** - Affichage de tableaux formatés et colorés
-- **std::process::Command** - Exécution des commandes git
+- **thiserror 2.x** - Génération ergonomique de types d'erreurs
+- **anyhow 1.x** - Gestion d'erreurs simplifiée pour applications
+
+### Dépendances de développement
+- **insta** - Snapshot testing pour les sorties formatées
+
+### Bibliothèque standard
+- **std::process::Command** - Exécution des commandes Git
 - **std::collections::HashMap** - Groupement des branches par auteur
+- **std::env** - Récupération du dossier de travail actuel
 
 ## 📝 Fonctionnement technique
 
-1. **Liste les branches** : Exécute `git for-each-ref` pour obtenir toutes les branches distantes avec métadonnées (date, auteur)
-2. **Calcule le retard** : Pour chaque branche, exécute `git rev-list --count <branch>..<origin>` pour compter les commits
-3. **Filtre et affiche** : Ne garde que les branches dépassant le seuil configuré
+### Workflow principal
+
+1. **Validation du repo Git** : Exécute `git rev-parse --git-dir` pour vérifier qu'on est dans un dépôt Git valide
+   - Fonctionne avec repos normaux, submodules, worktrees, et sous-dossiers
+   - Fail-fast : arrêt immédiat si pas un repo Git
+
+2. **Liste les branches** : Exécute `git for-each-ref` pour obtenir toutes les branches distantes avec métadonnées (date, auteur)
+
+3. **Calcule le retard** : Pour chaque branche, exécute `git rev-list --count <branch>..<origin>` pour compter les commits de retard
+
+4. **Filtre les résultats** : Ne garde que les branches dépassant le seuil configuré
+
+5. **Affichage coloré** : Groupe par auteur et affiche avec code couleur selon la sévérité
+
+### Gestion d'erreurs
+
+L'application utilise des **erreurs typées** avec des messages clairs :
+
+**`GitError::NotARepository`**
+```
+Error: Not a valid git repository
+
+Caused by:
+    Not a git repository: /tmp/my-folder
+```
+
+**`GitError::CommandFailed`**
+```
+Error: Failed list branches from origin/production
+
+Caused by:
+    La commande git for-each-ref ... a échoué: fatal: ...
+```
+
+**`GitError::ExecutionError`**
+```
+Caused by:
+    Une erreur lors de l'exécution est survenue: ...
+```
+
+**`GitError::ParsingError`**
+```
+Caused by:
+    Erreur de parsing du nombre de commits: ...
+```
+
+### Architecture testable
+
+- **Trait `GitCommandTrait`** : Abstraction pour les commandes Git
+- **`GitCommand`** : Implémentation réelle pour production
+- **`MockGitCommand`** : Implémentation de test sans dépendance Git
+- **Tests d'intégration** : Validation du comportement sans exécuter Git réellement
 
 
 ## 📄 Licence

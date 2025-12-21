@@ -1,5 +1,7 @@
 use crate::errors::GitError;
 use crate::git_cmd::GitCommandTrait;
+use std::env;
+use std::path::PathBuf;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BranchInfo {
     pub name: String,
@@ -62,4 +64,16 @@ fn get_commit_behind(
     let count: u32 = result.trim().parse()?;
 
     Ok(count)
+}
+
+pub fn validate_git_repository(cmd: &impl GitCommandTrait) -> Result<(), GitError> {
+    cmd.rev_parse(&["--git-dir"])
+        .map_err(|_| GitError::NotARepository {
+            path: env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .display()
+                .to_string(),
+        })?;
+
+    Ok(())
 }

@@ -60,6 +60,10 @@ impl GitCommandTrait for GitCommandMock {
         // Retourner les branches simulées
         Ok(self.branches_output.clone())
     }
+    
+    fn rev_parse(&self, _args: &[&str]) -> Result<String, GitError> {
+        Ok(".git".to_string())
+    }
 }
 
 #[test]

@@ -10,6 +10,8 @@ pub enum GitError {
     CommandFailed { command: String, stderr: String },
     #[error("Erreur de parsing du nombre de commits: {error}")]
     ParsingError { error: String },
+    #[error("Not a git repository: {path}")]
+    NotARepository { path: String },
 }
 
 impl From<ParseIntError> for GitError {
