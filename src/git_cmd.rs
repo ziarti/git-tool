@@ -1,5 +1,5 @@
-use std::process::Command;
 use crate::errors::GitError;
+use std::process::Command;
 
 pub trait GitCommandTrait {
     fn rev_list(&self, args: &[&str]) -> Result<String, GitError>;
@@ -10,17 +10,13 @@ pub struct GitCommand;
 
 impl GitCommand {
     fn execute_git_command(&self, sub_command: &str, args: &[&str]) -> Result<String, GitError> {
-        let output = Command::new("git")
-            .arg(sub_command)
-            .args(args)
-            .output()
-            .map_err(|error| GitError::ExecutionError {error: error.to_string() })?;
+        let output = Command::new("git").arg(sub_command).args(args).output()?;
 
         if !output.status.success() {
             return Err(GitError::CommandFailed {
-                command: format!("{} {}", sub_command.to_string(), args.join(" ")),
-                stderr: String::from_utf8_lossy(&output.stderr).to_string()}
-            );
+                command: format!("{} {}", sub_command, args.join(" ")),
+                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            });
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())

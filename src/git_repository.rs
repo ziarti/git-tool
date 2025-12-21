@@ -1,6 +1,5 @@
-use std::num::ParseIntError;
-use crate::git_cmd::{GitCommandTrait};
 use crate::errors::GitError;
+use crate::git_cmd::GitCommandTrait;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BranchInfo {
     pub name: String,
@@ -58,15 +57,9 @@ fn get_commit_behind(
     origin_branch: &str,
     branch_name: &str,
 ) -> Result<u32, GitError> {
-    let result = cmd.rev_list(&[
-        "--count",
-        &format!("{}..{}", branch_name, origin_branch),
-    ])?;
+    let result = cmd.rev_list(&["--count", &format!("{}..{}", branch_name, origin_branch)])?;
 
-    let count: u32 = result
-        .trim()
-        .parse()
-        .map_err(|e: ParseIntError| GitError::ParsingError {error: e.to_string()})?;
+    let count: u32 = result.trim().parse()?;
 
     Ok(count)
 }
